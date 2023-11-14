@@ -1,8 +1,7 @@
 import os
-import zlib
 import hashlib
 
-import serialization
+import object_database
 
 
 def init(args, repo_abspath: str) -> str:
@@ -23,54 +22,23 @@ def init(args, repo_abspath: str) -> str:
 
 
 def cat_file(args, repo_abspath: str):
-    """
-    Git file mode
-    https://git-scm.com/book/en/v2/Git-Internals-Git-Objects
-
-    +------------>100644 blob 7da9034ba8a3faa2a5aa9622767aefb15c8d7685    .gitignore
-    |  +--------->040000 tree c4d3b6ff63df9061e2a7fd99c2d41b811d6a46b1    app
-    |  |  +------>100755 blob 410c61170ddcb767fec99cc099d94c4178f252b2    gut.sh
-    |  |  |  +--->120000 blob 72155dacaa143b5d8365aaf8186267c31653764f    symlink
-    |  |  |  |
-    |  |  |  |
-    |  |  |  |
-    |  |  |  symbolic link
-    |  |  |
-    |  |  executable file
-    |  |
-    |  directory
-    |
-    normal file
-    """
-
-    object_name = args.object
-
-    # TODO: set gut_object to the master tree if object_name == "master^{tree}"
-    # print("100644 blob 7da9034ba8a3faa2a5aa9622767aefb15c8d7685    .gitignore")
-    # print("040000 tree 8405473ebedbe924d9ea17b3ef8afd3ca2323a4a    app")
-    # print("100755 blob 410c61170ddcb767fec99cc099d94c4178f252b2    gut.sh")
+    object_hash: str = args.object
 
     gut_object_file_path = os.path.join(
-        repo_abspath, f"objects/{object_name[0:2]}/{object_name[2:]}"
+        repo_abspath, f"objects/{object_hash[0:2]}/{object_hash[2:]}"
     )
 
-    # TODO: implement abbreviations i.e. first letters of hash instead of whole thing
+    # minimum 4 chars for abbreviation
+    if 4 > len(object_hash) <= 40:
+       print(f"fatal: Not a valid object name {object_hash}") 
+       exit(1)
 
-    gut_object = None
-    try:
-        with open(gut_object_file_path, "rb") as f:
-            compressed_data = f.read()
-            decompressed_data = zlib.decompress(compressed_data)
-            gut_object = serialization.decode_object(decompressed_data)
-    except FileNotFoundError:
-        print(f"fatal: Not a valid object name '{object_name}'")
-        exit(1)
-    except zlib.error:
-        print("fatal: Error during zlib decompression")
-        exit(1)
-    except serialization.error as e:
-        print(e.args[0])
-        exit(1)
+    if object_hash == "master^{tree}":
+        gut_object = object_database.get_commit_tree_object(repo_abspath)
+    if len(object_hash) < 40:
+        gut_object = object_database.get_object_by_hash_abbreviation(object_hash, repo_abspath)
+    else:
+        gut_object = object_database.get_object_by_hash(object_hash, repo_abspath)
 
     if args.type:
         print(gut_object.get("type"))
@@ -88,7 +56,15 @@ def cat_file(args, repo_abspath: str):
                 mode = obj.get("mode")
                 name = obj.get("name")
                 hash_ = obj.get("hash")
-                type_ = "blob"  # TODO: find object by hash and get the type
+                type_ = None
+                try:
+                    obj = object_database.get_object_by_hash(hash_, repo_abspath)
+                    type_ = obj.get("type")
+                except object_database.error as e:
+                    print(e)
+                    exit(1)
+                    # TODO: print other errors if present
+
                 entry = f"{mode} {type_} {hash_}    {name}\n"
                 output += entry
             print(output, end="")
@@ -124,20 +100,7 @@ def hash_object(args, repo_abspath: str):
             )
             exit(1)
 
-        hash_prefix = object_hash[0:2]
-        hash_suffix = object_hash[2:]
-
-        # create prefix dir if it doesn't already exist
-        prefix_dir = os.path.join(repo_abspath, f"objects/{hash_prefix}")
-        os.makedirs(prefix_dir, exist_ok=True)
-
-        # create the object file
-        gut_object_file_path = os.path.join(
-            repo_abspath, f"objects/{hash_prefix}/{hash_suffix}"
-        )
-        with open(gut_object_file_path, "wb") as f:
-            blob_data = serialization.encode_blob(file_content)
-            f.write(zlib.compress(blob_data))
+        object_database.write_blob_object(file_content, repo_abspath)
     else:
         print(object_hash)
 
