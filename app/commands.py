@@ -1,7 +1,6 @@
 import os
 import zlib
 import hashlib
-from pprint import pprint
 
 import serialization
 
@@ -84,17 +83,15 @@ def cat_file(args, repo_abspath: str):
             )
             print(output, end="")
         elif gut_object.get("type") == "tree":
-            pprint(gut_object)
-            pass
-            # output = ""
-            # for obj in gut_object.get("objects"):
-            #     mode = obj.get("mode")
-            #     name = obj.get("name")
-            #     hash_ = obj.get("hash")
-            #     type_ = "blob"  # TODO: find object by hash and get the type
-            #     entry = f"{mode} {type_} {hash_}    {name}\n"
-            #     output += entry
-            # print(output, end="")
+            output = ""
+            for obj in gut_object.get("objects"):
+                mode = obj.get("mode")
+                name = obj.get("name")
+                hash_ = obj.get("hash")
+                type_ = "blob"  # TODO: find object by hash and get the type
+                entry = f"{mode} {type_} {hash_}    {name}\n"
+                output += entry
+            print(output, end="")
     elif args.exists:
         gut_object_file_exists = os.path.exists(gut_object_file_path)
         if not gut_object_file_exists:
