@@ -1,4 +1,5 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
+from binascii import hexlify
 
 
 class error(Exception):
@@ -47,36 +48,58 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
             "decoded_file_content": decoded_file_content,
         }
         return blob_object
+
     elif object_type == "tree":
+        # TODO: convince myself to refactor this shit
+        # TODO: refactor this shit
         # b"{type} {size}\x00{object}{object}"
         size = int(binary_data[0:first_nul_index].split(b" ")[1].decode())
 
         entries_data = binary_data[first_nul_index + 1 :]
 
-        space_indexes = [
+        indexes = [
             i for i in range(len(entries_data)) if entries_data.startswith(b" ", i)
         ]
-
-        # where to split the entries
-        indexes = list(map(lambda i: i - 6, space_indexes[1:]))
 
         # split using the indexes, resulting in an array of binary data of each entry
         entry_splits = [
             entries_data[i:j] for i, j in zip([0] + indexes, indexes + [None])
         ]
 
-        object_entries = []
-        for entry in entry_splits:
-            b'100644 .gitignore\x00}\xa9\x03K\xa8\xa3\xfa\xa2\xa5\xaa\x96"vz\xef\xb1\\\x8dv'
-            b"\x8540000 app\x00\x9eu\x86ej2'\x8b\r\xd8G\xf2\x0b\xb2\xec\x96\x9bG\xa3W" # why the fuck is there a 0x85 instead of 0
-            b'100755 gut.sh\x00nU\xf9-W\xd2\xe7W\x89\x82\xcak\x17X%\xb1F\x95\xa7\xd7'
-            print(entry)
-            # first_nul_index = entry.find(b"\x00")
-            # print(entry)
-            # mode = entry[0:6].decode()
-            # name = entry[7:first_nul_index].decode()
-            # _hash = "".join([format(b, "02x") for b in entry[first_nul_index + 1 :]])
-            # object_entries.append({"mode": mode, "name": name, "hash": _hash})
+        # extract the modes and remove them from entry_splits
+        modes: List[str] = []
+        for i in range(len(entry_splits) - 1):
+            entry = entry_splits[i]
+            mode_length = 6
+            if entry.endswith(b"40000"):
+                mode_length = (
+                    5  # git just doesnt store the first 0 for tree because reasons
+                )
+            mode = entry[-mode_length:]
+            if mode_length == 5:
+                mode = (
+                    b"0" + mode
+                )  # add the missing 0 to 40000 to get the 040000 tree mode
+
+            entry_splits[i] = entry_splits[i][
+                :-mode_length
+            ]  # remove mode at the end from entries
+            modes.append(mode.decode())
+
+        entries = list(map(lambda e: e[1:], entry_splits[1:]))
+
+        object_entries: Dict[str, Any] = []
+        for i in range(len(entries)):
+            entry = entries[i]
+            first_nul_index_entry = entries[i].index(b"\x00")
+
+            mode = modes[i]
+            name = entry[:first_nul_index_entry].decode()
+            hash_ = hexlify(entry[first_nul_index_entry + 1 :]).decode()
+            assert len(hash_) == 40
+
+            object_entries.append({"mode": mode, "name": name, "hash": hash_})
+
         return {"type": "tree", "size": size, "objects": object_entries}
-    else:
-        raise error(f"fatal: decoding {object_type} object type is not implemented")
+
+    raise error(f"fatal: decoding {object_type} object type is not implemented")

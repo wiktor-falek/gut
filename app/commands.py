@@ -1,6 +1,7 @@
 import os
 import zlib
 import hashlib
+from pprint import pprint
 
 import serialization
 
@@ -83,6 +84,7 @@ def cat_file(args, repo_abspath: str):
             )
             print(output, end="")
         elif gut_object.get("type") == "tree":
+            pprint(gut_object)
             pass
             # output = ""
             # for obj in gut_object.get("objects"):
@@ -146,12 +148,12 @@ def hash_object(args, repo_abspath: str):
 def write_tree(args, repo_abspath: str):
     print("write-tree")
     current_path = os.path.join(repo_abspath, "..")
-    
+
     tree_data = []
     for root, dirs, files in os.walk(current_path, topdown=True):
         if ".gut" in dirs:
             dirs.remove(".gut")
-        if (".git" in dirs):
+        if ".git" in dirs:
             dirs.remove(".git")
 
         tree_data.append((root, dirs, files))
