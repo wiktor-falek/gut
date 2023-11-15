@@ -1,3 +1,4 @@
+from typing import List
 import os
 import hashlib
 
@@ -30,13 +31,15 @@ def cat_file(args, repo_abspath: str):
 
     # minimum 4 chars for abbreviation
     if 4 > len(object_hash) <= 40:
-       print(f"fatal: Not a valid object name {object_hash}") 
-       exit(1)
+        print(f"fatal: Not a valid object name {object_hash}")
+        exit(1)
 
     if object_hash == "master^{tree}":
         gut_object = object_database.get_commit_tree_object(repo_abspath)
     if len(object_hash) < 40:
-        gut_object = object_database.get_object_by_hash_abbreviation(object_hash, repo_abspath)
+        gut_object = object_database.get_object_by_hash_abbreviation(
+            object_hash, repo_abspath
+        )
     else:
         gut_object = object_database.get_object_by_hash(object_hash, repo_abspath)
 
@@ -106,28 +109,27 @@ def hash_object(args, repo_abspath: str):
 
 
 def write_tree(args, repo_abspath: str):
-    print("write-tree")
-    current_path = os.path.join(repo_abspath, "..")
+    root_path = os.path.abspath(os.path.join(repo_abspath, ".."))
 
-    tree_data = []
-    for root, dirs, files in os.walk(current_path, topdown=True):
-        if ".gut" in dirs:
-            dirs.remove(".gut")
-        if ".git" in dirs:
-            dirs.remove(".git")
+    def traverse_directory_iterative(start_path):
+        excluded_dirs = (".gut", ".git", "__pycache__")
 
-        tree_data.append((root, dirs, files))
+        stack: List[str] = [start_path]
+        while stack:
+            current_path = stack.pop()
+            print(current_path)
+            if os.path.isdir(current_path):
+                stack.extend(
+                    [
+                        os.path.join(current_path, entry)
+                        for entry in os.listdir(current_path)
+                        if not entry.endswith(excluded_dirs)
+                    ]
+                )
+
+    traverse_directory_iterative(root_path)
 
     """
-    /dir
-      file_1.txt
-      file_2.txt
-
-    1. go over each file and encode into a blob object
-    2. store the blob objects for the tree of /dir directory
-    3. encode the directory into a tree object
-    4. repeat recursively for each directory
-
     # object = b"{type} {size}\x00{content}"
     # b"{type} {size}\x00{object}{object}"
 
