@@ -37,7 +37,7 @@ def cat_file(args, repo_abspath: str):
 
     if object_hash == "master^{tree}":
         gut_object = object_database.get_commit_tree_object(repo_abspath)
-    if len(object_hash) < 40:
+    elif len(object_hash) < 40:
         gut_object = object_database.get_object_by_hash_abbreviation(
             object_hash, repo_abspath
         )
@@ -168,14 +168,8 @@ def write_tree(args, repo_abspath: str):
     print(output, end="")
 
     """
-    100644 blob 7da9034ba8a3faa2a5aa9622767aefb15c8d7685    .gitignore
-    040000 tree 1ea2d05d385f2b4b4215875c45a9141db2546e58    app
-    100755 blob 6e55f92d57d2e7578982ca6b175825b14695a7d7    gut.sh
-    """
-
-    """
     # object = b"{type} {size}\x00{content}"
-    # b"{type} {size}\x00{object}{object}"
+    # b"{type} {size}\x00{object_hash}{object_hash}"
 
     with open(gut_object_file_path, "wb") as f:
         blob_data = serialization.encode_blob(file_content)

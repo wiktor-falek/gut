@@ -32,7 +32,7 @@ def write_blob_object(file_content: bytes, repo_abspath: str):
 
 
 def get_commit_tree_object(repo_abspath: str) -> Dict[str, Any]:
-    return error("error: getting commit tree is not implemented")
+    raise error("error: getting commit tree is not implemented")
 
 
 def get_file_content_by_hash(
