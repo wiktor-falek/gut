@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import os
 import zlib
 import hashlib
@@ -31,16 +31,29 @@ def write_blob_object(file_content: bytes, repo_abspath: str):
         f.write(zlib.compress(blob_data))
 
 
+def write_tree_object(
+    tree_objects: List[serialization.TreeObject], object_hash: str, repo_abspath: str
+):
+    object_abspath = _get_object_abspath(object_hash, repo_abspath)
+
+    # create prefix dir if it doesn't already exist
+    prefix_dir_abspath = os.path.join(object_abspath, "..")
+    os.makedirs(prefix_dir_abspath, exist_ok=True)
+
+    with open(object_abspath, "wb") as f:
+        blob_data = serialization.encode_tree(tree_objects)
+        f.write(zlib.compress(blob_data))
+
+
 def get_commit_tree_object(repo_abspath: str) -> Dict[str, Any]:
     raise error("error: getting commit tree is not implemented")
 
 
-def get_file_content_by_hash(
-    object_hash: str, repo_abspath: str
-) -> bytes | None:
+def get_file_content_by_hash(object_hash: str, repo_abspath: str) -> bytes | None:
     """
     Returns decompressed file content of the object if file exists or None.
     """
+
     prefix = object_hash[0:2]
     suffix = object_hash[2:]
 

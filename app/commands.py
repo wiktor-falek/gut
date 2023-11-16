@@ -1,9 +1,9 @@
 from typing import Dict, List, Any
 import os
 import hashlib
-import json
 
 import object_database
+import serialization
 
 
 def init(args, repo_abspath: str) -> str:
@@ -114,7 +114,7 @@ def write_tree(args, repo_abspath: str):
 
     EXCLUDED_DIRS = (".gut", ".git", "__pycache__")
 
-    def create_tree(current_dir: str) -> Dict[str, Any]:
+    def create_and_write_tree(current_dir: str) -> Dict[str, Any]:
         tree = {
             "name": os.path.basename(current_dir),
             "type": "tree",
@@ -122,59 +122,76 @@ def write_tree(args, repo_abspath: str):
             "hash": None,
             "objects": [],
         }
+
         for entry in os.listdir(current_dir):
             if entry.endswith(EXCLUDED_DIRS):
                 continue
+
             entry_path = os.path.join(current_dir, entry)
 
             if os.path.isdir(entry_path):
-                subtree = create_tree(entry_path)
+                # TODO: recursive -> iterative
+                subtree = create_and_write_tree(entry_path)
                 tree.get("objects").append(subtree)
             else:
-                # TODO: read file contents at entry_path
-                # TODO: create and write a blob to the database
+                file_content = None
+                with open(entry_path, "rb") as f:
+                    file_content = f.read()
+
+                hash_ = hashlib.sha1(file_content).hexdigest()
+
+                object_database.write_blob_object(entry_path)
+
+                is_executable = bool(os.stat(entry_path).st_mode & 0o111)
+                is_symlink = os.path.islink(entry_path)
+
+                if is_symlink:
+                    mode = ""
+                elif is_executable:
+                    
+
 
                 # TODO: check if file is a symlink or is executable and set appropriate mode
-                blob = {"name": entry, "type": "blob", "mode": "100644", "hash": None}
+                blob = {"name": entry, "type": "blob", "mode": "100644", "hash": hash_}
                 blob["hash"] = "TODO"
                 tree.get("objects").append(blob)
 
+        tree_objects = tree.get("objects")
+
         # ignore empty trees
-        if len(tree.get("objects")) != 0:
-            tree["hash"] = "TODO"
-            # write the tree
-            pass
+        if len(tree_objects) != 0:
+            # convert tree_object dicts to named tuples
+            tuple_tree_objects = [
+                serialization.TreeObject(**obj) for obj in tree_objects
+            ]
+
+            encoded_tree_object = serialization.encode_tree(tuple_tree_objects)
+            hash_ = hashlib.sha1(encoded_tree_object).hexdigest()
+            object_database.write_tree_object(tuple_tree_objects, hash_, repo_abspath)
+
+            tree["hash"] = hash_
 
         return tree
 
-    tree = create_tree(root_path)
+    tree = create_and_write_tree(root_path)
+    print(tree.get("hash"))
 
-    # print(tree.get("hash"))
     # TODO: move code below to ls-tree
 
-    objects: List[Dict[str, Any]] = tree.get("objects")
+    # objects: List[Dict[str, Any]] = tree.get("objects")
 
-    objects.sort(key=lambda obj: obj.get("name"))
+    # objects.sort(key=lambda obj: obj.get("name"))
 
-    output = ""
-    for obj in objects:
-        mode = obj.get("mode")
-        type_ = obj.get("type")
-        hash_ = obj.get("hash")
-        name = obj.get("name")
+    # output = ""
+    # for obj in objects:
+    #     mode = obj.get("mode")
+    #     type_ = obj.get("type")
+    #     hash_ = obj.get("hash")
+    #     name = obj.get("name")
 
-        output += f"{mode} {type_} {hash_}    {name}\n"
+    #     output += f"{mode} {type_} {hash_}    {name}\n"
 
-    print(output, end="")
-
-    """
-    # object = b"{type} {size}\x00{content}"
-    # b"{type} {size}\x00{object_hash}{object_hash}"
-
-    with open(gut_object_file_path, "wb") as f:
-        blob_data = serialization.encode_blob(file_content)
-        f.write(zlib.compress(blob_data))
-    """
+    # print(output, end="")
 
 
 def ls_tree(args):

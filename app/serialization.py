@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, NamedTuple
 from binascii import hexlify
 
 
@@ -6,22 +6,49 @@ class error(Exception):
     ...
 
 
+class TreeObject(NamedTuple):
+    name: str
+    mode: str
+    hash_bytes: bytes
+
+
 def encode_blob(file_data: bytes) -> bytes:
     """
-    Takes binary data of a file and outputs blob object data in the following format:
-    b"{type} {size}\\x00{content}"
+    Takes binary data of a file and outputs Gut blob object data in the following format:
+
+    b"{type} {content_size}\\x00{content}"
 
     Example:
     b"blob 22\\x00print('Hello World')\\n"
     """
+
     byte_size = len(file_data)
     header = f"blob {byte_size}\x00".encode()
     return header + file_data
 
 
-def encode_tree():
-    # b"tree {size}\x00{blob}{blob}"
-    pass
+def encode_tree(tree_objects: List[TreeObject]) -> bytes:
+    """
+    Takes a list of TreeObject named tuples (name: str, mode: str, hash_bytes: bytes).
+
+    Outputs Gut tree object data in the following format:
+
+    b"{type} {content_size}\\x00{object}{object}..."
+
+    where each object is represented as b"{file_mode} {file_name}{hash_bytes}"
+    """
+
+    objects_data = b""
+    for obj in tree_objects:
+        name = obj.name.encode()
+        mode = obj.mode.encode()
+        hash_bytes = bytes.fromhex(obj.hash_bytes)
+        objects_data += f"{mode} {name}{hash_bytes}".encode()
+
+    byte_size = len(objects_data)
+    header = f"tree {byte_size}\x00".encode()
+
+    return header + objects_data
 
 
 def decode_file_content(binary_content: bytes) -> str | None:

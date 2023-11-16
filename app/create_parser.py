@@ -52,8 +52,7 @@ def create_parser():
     )
 
     write_tree_parser = subparsers.add_parser(
-            "write-tree", description="Create a tree object using the current index"
-        )
-
+        "write-tree", description="Create a tree object using the current index"
+    )
 
     return parser
