@@ -23,7 +23,7 @@ def write_blob_object(file_content: bytes, repo_abspath: str):
     object_abspath = _get_object_abspath(object_hash, repo_abspath)
 
     # create prefix dir if it doesn't already exist
-    prefix_dir_abspath = os.path.join(object_abspath, "..")
+    prefix_dir_abspath = os.path.dirname(object_abspath)
     os.makedirs(prefix_dir_abspath, exist_ok=True)
 
     with open(object_abspath, "wb") as f:
@@ -37,7 +37,7 @@ def write_tree_object(
     object_abspath = _get_object_abspath(object_hash, repo_abspath)
 
     # create prefix dir if it doesn't already exist
-    prefix_dir_abspath = os.path.join(object_abspath, "..")
+    prefix_dir_abspath = os.path.dirname(object_abspath)
     os.makedirs(prefix_dir_abspath, exist_ok=True)
 
     with open(object_abspath, "wb") as f:

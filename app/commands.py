@@ -110,7 +110,7 @@ def hash_object(args, repo_abspath: str):
 
 
 def write_tree(args, repo_abspath: str):
-    root_path = os.path.abspath(os.path.join(repo_abspath, ".."))
+    root_path = os.path.dirname(repo_abspath)
 
     EXCLUDED_DIRS = (".gut", ".git", "__pycache__")
 
@@ -140,7 +140,7 @@ def write_tree(args, repo_abspath: str):
 
                 hash_ = hashlib.sha1(file_content).hexdigest()
 
-                object_database.write_blob_object(entry_path)
+                object_database.write_blob_object(file_content, repo_abspath)
 
                 is_executable = bool(os.stat(entry_path).st_mode & 0o111)
                 is_symlink = os.path.islink(entry_path)
@@ -148,28 +148,29 @@ def write_tree(args, repo_abspath: str):
                 if is_symlink:
                     mode = "120000"
                 elif is_executable:
+                    mode = "100755"
+                else:
                     mode = "100644"
 
-
                 # TODO: check if file is a symlink or is executable and set appropriate mode
-                blob = {"name": entry, "type": "blob", "mode": "100644", "hash": hash_}
-                blob["hash"] = "TODO"
+                blob = {"name": entry, "type": "blob", "mode": mode, "hash": hash_}
                 tree.get("objects").append(blob)
 
         tree_objects = tree.get("objects")
 
+        # convert tree_object dicts to named tuples
+        tuple_tree_objects = [
+            serialization.TreeObject(obj["name"], obj["mode"], obj["hash"])
+            for obj in tree_objects
+        ]
+
+        encoded_tree_object = serialization.encode_tree(tuple_tree_objects)
+        hash_ = hashlib.sha1(encoded_tree_object).hexdigest()
+        tree["hash"] = hash_
+
         # ignore empty trees
         if len(tree_objects) != 0:
-            # convert tree_object dicts to named tuples
-            tuple_tree_objects = [
-                serialization.TreeObject(**obj) for obj in tree_objects
-            ]
-
-            encoded_tree_object = serialization.encode_tree(tuple_tree_objects)
-            hash_ = hashlib.sha1(encoded_tree_object).hexdigest()
             object_database.write_tree_object(tuple_tree_objects, hash_, repo_abspath)
-
-            tree["hash"] = hash_
 
         return tree
 

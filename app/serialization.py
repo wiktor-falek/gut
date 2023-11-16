@@ -9,7 +9,7 @@ class error(Exception):
 class TreeObject(NamedTuple):
     name: str
     mode: str
-    hash_bytes: bytes
+    hash_hex: str
 
 
 def encode_blob(file_data: bytes) -> bytes:
@@ -35,17 +35,21 @@ def encode_tree(tree_objects: List[TreeObject]) -> bytes:
 
     b"{type} {content_size}\\x00{object}{object}..."
 
-    where each object is represented as b"{file_mode} {file_name}{hash_bytes}"
+    where each object is represented as b"{file_mode} {file_name}\\x00{hash_bytes}"
     """
-
-    objects_data = b"" 
+    
+    objects_data = b""
     for obj in tree_objects:
         name = obj.name.encode()
         mode = obj.mode.encode()
-        if mode == "040000":
-            mode = "40000" # whatever the reason might be git does that, it does that
-        hash_bytes = bytes.fromhex(obj.hash_bytes)
-        objects_data += f"{mode} {name}{hash_bytes}".encode()
+        if mode == b"040000":
+            mode = b"40000"  # whatever the reason might be git does that, it does that
+        hash_bytes = bytes.fromhex(obj.hash_hex)
+        objects_data += mode
+        objects_data += b" "
+        objects_data += name
+        objects_data += b"\x00"
+        objects_data += hash_bytes
 
     byte_size = len(objects_data)
     header = f"tree {byte_size}\x00".encode()
@@ -83,9 +87,12 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
         # TODO: convince myself to refactor this shit
         # TODO: refactor this shit
         # b"{type} {size}\x00{object}{object}"
+
         size = int(binary_data[0:first_nul_index].split(b" ")[1].decode())
 
         entries_data = binary_data[first_nul_index + 1 :]
+
+        print(entries_data)
 
         indexes = [
             i for i in range(len(entries_data)) if entries_data.startswith(b" ", i)
@@ -114,6 +121,7 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
             entry_splits[i] = entry_splits[i][
                 :-mode_length
             ]  # remove mode at the end from entries
+            print(f"{mode=}")
             modes.append(mode.decode())
 
         entries = list(map(lambda e: e[1:], entry_splits[1:]))
@@ -122,7 +130,7 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
         for i in range(len(entries)):
             entry = entries[i]
             first_nul_index_entry = entries[i].index(b"\x00")
-
+            print(f"{entry=}")
             mode = modes[i]
             name = entry[:first_nul_index_entry].decode()
             hash_ = hexlify(entry[first_nul_index_entry + 1 :]).decode()
