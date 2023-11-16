@@ -142,8 +142,8 @@ def write_tree(args, repo_abspath: str):
 
                 object_database.write_blob_object(file_content, repo_abspath)
 
-                is_executable = bool(os.stat(entry_path).st_mode & 0o111)
                 is_symlink = os.path.islink(entry_path)
+                is_executable = bool(os.stat(entry_path).st_mode & 0o111)
 
                 if is_symlink:
                     mode = "120000"
@@ -152,13 +152,12 @@ def write_tree(args, repo_abspath: str):
                 else:
                     mode = "100644"
 
-                # TODO: check if file is a symlink or is executable and set appropriate mode
                 blob = {"name": entry, "type": "blob", "mode": mode, "hash": hash_}
                 tree.get("objects").append(blob)
 
         tree_objects = tree.get("objects")
 
-        # convert tree_object dicts to named tuples
+        # convert tree_object dicts to TreeObject named tuples
         tuple_tree_objects = [
             serialization.TreeObject(obj["name"], obj["mode"], obj["hash"])
             for obj in tree_objects
@@ -168,7 +167,7 @@ def write_tree(args, repo_abspath: str):
         hash_ = hashlib.sha1(encoded_tree_object).hexdigest()
         tree["hash"] = hash_
 
-        # ignore empty trees
+        # do not write a tree without any files
         if len(tree_objects) != 0:
             object_database.write_tree_object(tuple_tree_objects, hash_, repo_abspath)
 
