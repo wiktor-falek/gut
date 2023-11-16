@@ -45,25 +45,25 @@ def cat_file(args, repo_abspath: str):
         gut_object = object_database.get_object_by_hash(object_hash, repo_abspath)
 
     if args.type:
-        print(gut_object.get("type"))
+        print(gut_object["type"])
     elif args.size:
-        print(gut_object.get("size"))
+        print(gut_object["size"])
     elif args.pretty:
-        if gut_object.get("type") == "blob":
-            output = gut_object.get("decoded_file_content") or gut_object.get(
+        if gut_object["type"] == "blob":
+            output = gut_object["decoded_file_content"] or gut_object.get(
                 "file_content"
             )
             print(output, end="")
-        elif gut_object.get("type") == "tree":
+        elif gut_object["type"] == "tree":
             output = ""
-            for obj in gut_object.get("objects"):
-                mode = obj.get("mode")
-                name = obj.get("name")
-                hash_ = obj.get("hash")
+            for obj in gut_object["objects"]:
+                mode = obj["mode"]
+                name = obj["name"]
+                hash_ = obj["hash"]
                 type_ = None
                 try:
                     obj = object_database.get_object_by_hash(hash_, repo_abspath)
-                    type_ = obj.get("type")
+                    type_ = obj["type"]
                 except object_database.error as e:
                     print(e)
                     exit(1)
@@ -132,7 +132,7 @@ def write_tree(args, repo_abspath: str):
             if os.path.isdir(entry_path):
                 # TODO: recursive -> iterative
                 subtree = create_and_write_tree(entry_path)
-                tree.get("objects").append(subtree)
+                tree["objects"].append(subtree)
             else:
                 file_content = None
                 with open(entry_path, "rb") as f:
@@ -153,9 +153,9 @@ def write_tree(args, repo_abspath: str):
                     mode = "100644"
 
                 blob = {"name": entry, "type": "blob", "mode": mode, "hash": hash_}
-                tree.get("objects").append(blob)
+                tree["objects"].append(blob)
 
-        tree_objects = tree.get("objects")
+        tree_objects = tree["objects"]
 
         # convert tree_object dicts to TreeObject named tuples
         tuple_tree_objects = [
@@ -174,20 +174,20 @@ def write_tree(args, repo_abspath: str):
         return tree
 
     tree = create_and_write_tree(root_path)
-    print(tree.get("hash"))
+    print(tree["hash"])
 
     # TODO: move code below to ls-tree
 
-    # objects: List[Dict[str, Any]] = tree.get("objects")
+    # objects: List[Dict[str, Any]] = tree["objects"]
 
-    # objects.sort(key=lambda obj: obj.get("name"))
+    # objects.sort(key=lambda obj: obj["name"])
 
     # output = ""
     # for obj in objects:
-    #     mode = obj.get("mode")
-    #     type_ = obj.get("type")
-    #     hash_ = obj.get("hash")
-    #     name = obj.get("name")
+    #     mode = obj["mode"]
+    #     type_ = obj["type"]
+    #     hash_ = obj["hash"]
+    #     name = obj["name"]
 
     #     output += f"{mode} {type_} {hash_}    {name}\n"
 
