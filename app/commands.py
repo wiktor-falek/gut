@@ -1,6 +1,7 @@
-from typing import List
+from typing import Dict, List, Any
 import os
 import hashlib
+import json
 
 import object_database
 
@@ -111,23 +112,66 @@ def hash_object(args, repo_abspath: str):
 def write_tree(args, repo_abspath: str):
     root_path = os.path.abspath(os.path.join(repo_abspath, ".."))
 
-    def traverse_directory_iterative(start_path):
-        excluded_dirs = (".gut", ".git", "__pycache__")
+    EXCLUDED_DIRS = (".gut", ".git", "__pycache__")
 
-        stack: List[str] = [start_path]
-        while stack:
-            current_path = stack.pop()
-            print(current_path)
-            if os.path.isdir(current_path):
-                stack.extend(
-                    [
-                        os.path.join(current_path, entry)
-                        for entry in os.listdir(current_path)
-                        if not entry.endswith(excluded_dirs)
-                    ]
-                )
+    def create_tree(current_dir: str) -> Dict[str, Any]:
+        tree = {
+            "name": os.path.basename(current_dir),
+            "type": "tree",
+            "mode": "040000",
+            "hash": None,
+            "objects": [],
+        }
+        for entry in os.listdir(current_dir):
+            if entry.endswith(EXCLUDED_DIRS):
+                continue
+            entry_path = os.path.join(current_dir, entry)
 
-    traverse_directory_iterative(root_path)
+            if os.path.isdir(entry_path):
+                subtree = create_tree(entry_path)
+                tree.get("objects").append(subtree)
+            else:
+                # TODO: read file contents at entry_path
+                # TODO: create and write a blob to the database
+
+                # TODO: check if file is a symlink or is executable and set appropriate mode
+                blob = {"name": entry, "type": "blob", "mode": "100644", "hash": None}
+                blob["hash"] = "TODO"
+                tree.get("objects").append(blob)
+
+        # ignore empty trees
+        if len(tree.get("objects")) != 0:
+            tree["hash"] = "TODO"
+            # write the tree
+            pass
+
+        return tree
+
+    tree = create_tree(root_path)
+
+    # print(tree.get("hash"))
+    # TODO: move code below to ls-tree
+
+    objects: List[Dict[str, Any]] = tree.get("objects")
+
+    objects.sort(key=lambda obj: obj.get("name"))
+
+    output = ""
+    for obj in objects:
+        mode = obj.get("mode")
+        type_ = obj.get("type")
+        hash_ = obj.get("hash")
+        name = obj.get("name")
+
+        output += f"{mode} {type_} {hash_}    {name}\n"
+
+    print(output, end="")
+
+    """
+    100644 blob 7da9034ba8a3faa2a5aa9622767aefb15c8d7685    .gitignore
+    040000 tree 1ea2d05d385f2b4b4215875c45a9141db2546e58    app
+    100755 blob 6e55f92d57d2e7578982ca6b175825b14695a7d7    gut.sh
+    """
 
     """
     # object = b"{type} {size}\x00{content}"

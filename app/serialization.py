@@ -20,6 +20,7 @@ def encode_blob(file_data: bytes) -> bytes:
 
 
 def encode_tree():
+    # b"tree {size}\x00{blob}{blob}"
     pass
 
 
