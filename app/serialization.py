@@ -38,10 +38,12 @@ def encode_tree(tree_objects: List[TreeObject]) -> bytes:
     where each object is represented as b"{file_mode} {file_name}{hash_bytes}"
     """
 
-    objects_data = b""
+    objects_data = b"" 
     for obj in tree_objects:
         name = obj.name.encode()
         mode = obj.mode.encode()
+        if mode == "040000":
+            mode = "40000" # whatever the reason might be git does that, it does that
         hash_bytes = bytes.fromhex(obj.hash_bytes)
         objects_data += f"{mode} {name}{hash_bytes}".encode()
 

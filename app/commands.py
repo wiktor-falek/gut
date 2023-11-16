@@ -146,9 +146,9 @@ def write_tree(args, repo_abspath: str):
                 is_symlink = os.path.islink(entry_path)
 
                 if is_symlink:
-                    mode = ""
+                    mode = "120000"
                 elif is_executable:
-                    
+                    mode = "100644"
 
 
                 # TODO: check if file is a symlink or is executable and set appropriate mode
