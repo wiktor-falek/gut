@@ -1,6 +1,6 @@
 from utils import get_repository_abspath
-import commands
 from create_parser import create_parser
+import commands
 
 
 def main():
@@ -8,26 +8,24 @@ def main():
 
     parser = create_parser()
     args = parser.parse_args()
-    
-    command = args.command
 
-    if command is None:
-        print(parser.format_help())
-        exit(0)
+    command: str = args.command
 
-    if command == "init":
-        repo_abspath = commands.init(args, repo_abspath)
-
-    if repo_abspath is None:
+    if repo_abspath is None and command != "init":
         print("fatal: not a git repository (or any of the parent directories): .git")
         exit(1)
 
-    if command == "cat-file":
-        commands.cat_file(args, repo_abspath)
-    elif command == "hash-object":
-        commands.hash_object(args, repo_abspath)
-    elif command == "write-tree":
-        commands.write_tree(args, repo_abspath)
+    match command:
+        case "init":
+            commands.init(args, repo_abspath)
+        case "cat-file":
+            commands.cat_file(args, repo_abspath)
+        case "hash-object":
+            commands.hash_object(args, repo_abspath)
+        case "write-tree":
+            commands.write_tree(args, repo_abspath)
+        case _:
+            print(parser.format_help())
 
 
 if __name__ == "__main__":

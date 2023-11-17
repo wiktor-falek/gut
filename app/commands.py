@@ -6,11 +6,11 @@ import object_database
 import serialization
 
 
-def init(args, repo_abspath: str) -> str:
+def init(args, repo_abspath: str):
     if repo_abspath is not None:
         # TODO: handle already existing repository
         print(f"Reinitialized existing Gut repository in {repo_abspath}")
-        return repo_abspath
+        exit(0)
 
     os.mkdir(".gut/")
     os.mkdir(".gut/objects")
@@ -20,7 +20,6 @@ def init(args, repo_abspath: str) -> str:
 
     new_repo_abspath = os.path.join(os.getcwd(), ".gut/")
     print(f"Initialized Gut directory in {new_repo_abspath}")
-    return new_repo_abspath
 
 
 def cat_file(args, repo_abspath: str):
