@@ -123,7 +123,12 @@ def hash_object(args, repo_abspath: str):
 def write_tree(args, repo_abspath: str):
     root_path = os.path.dirname(repo_abspath)
 
-    EXCLUDED_DIRS = (".gut", ".git", "__pycache__")
+    gut_ignore_file_path = os.path.dirname(repo_abspath)
+    gut_ignore_entries = [".git", "app/__pycache__"]  # TODO: read from file
+    EXCLUDED_DIRS = [
+        os.path.join(gut_ignore_file_path, entry)
+        for entry in (".gut", *gut_ignore_entries)
+    ]
 
     def create_and_write_tree(current_dir: str) -> Dict[str, Any]:
         tree = {
@@ -135,26 +140,26 @@ def write_tree(args, repo_abspath: str):
         }
 
         for entry in os.listdir(current_dir):
-            if entry.endswith(EXCLUDED_DIRS):
+            entry_abspath = os.path.join(current_dir, entry)
+
+            if entry_abspath in EXCLUDED_DIRS:
                 continue
 
-            entry_path = os.path.join(current_dir, entry)
-
-            if os.path.isdir(entry_path):
+            if os.path.isdir(entry_abspath):
                 # TODO: recursive -> iterative
-                subtree = create_and_write_tree(entry_path)
+                subtree = create_and_write_tree(entry_abspath)
                 tree["objects"].append(subtree)
             else:
                 file_content = None
-                with open(entry_path, "rb") as f:
+                with open(entry_abspath, "rb") as f:
                     file_content = f.read()
 
                 hash_ = hashlib.sha1(file_content).hexdigest()
 
                 object_database.write_blob_object(file_content, repo_abspath)
 
-                is_symlink = os.path.islink(entry_path)
-                is_executable = bool(os.stat(entry_path).st_mode & 0o111)
+                is_symlink = os.path.islink(entry_abspath)
+                is_executable = bool(os.stat(entry_abspath).st_mode & 0o111)
 
                 if is_symlink:
                     mode = "120000"
