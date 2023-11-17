@@ -45,10 +45,22 @@ def cat_file(args, repo_abspath: str):
         gut_object = object_database.get_object_by_hash(object_hash, repo_abspath)
 
     if args.type:
+        if gut_object is None:
+            print("fatal: git cat-file: could not get object info")
+            exit(1)
         print(gut_object["type"])
+
     elif args.size:
+        if gut_object is None:
+            print("fatal: git cat-file: could not get object info")
+            exit(1)
         print(gut_object["size"])
+
     elif args.pretty:
+        if gut_object is None:
+            print(f"fatal: Not a valid object name {object_hash}")
+            exit(1)
+
         if gut_object["type"] == "blob":
             output = gut_object["decoded_file_content"] or gut_object.get(
                 "file_content"
@@ -73,8 +85,7 @@ def cat_file(args, repo_abspath: str):
                 output += entry
             print(output, end="")
     elif args.exists:
-        gut_object_file_exists = os.path.exists(gut_object_file_path)
-        if not gut_object_file_exists:
+        if gut_object is None:
             exit(1)
 
 

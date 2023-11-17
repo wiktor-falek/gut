@@ -92,8 +92,6 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
 
         entries_data = binary_data[first_nul_index + 1 :]
 
-        print(entries_data)
-
         indexes = [
             i for i in range(len(entries_data)) if entries_data.startswith(b" ", i)
         ]
@@ -121,7 +119,6 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
             entry_splits[i] = entry_splits[i][
                 :-mode_length
             ]  # remove mode at the end from entries
-            print(f"{mode=}")
             modes.append(mode.decode())
 
         entries = list(map(lambda e: e[1:], entry_splits[1:]))
@@ -130,7 +127,6 @@ def decode_object(binary_data: bytes) -> Dict[str, Any]:
         for i in range(len(entries)):
             entry = entries[i]
             first_nul_index_entry = entries[i].index(b"\x00")
-            print(f"{entry=}")
             mode = modes[i]
             name = entry[:first_nul_index_entry].decode()
             hash_ = hexlify(entry[first_nul_index_entry + 1 :]).decode()

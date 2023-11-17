@@ -59,9 +59,12 @@ def get_file_content_by_hash(object_hash: str, repo_abspath: str) -> bytes | Non
 
     file_path = os.path.join(repo_abspath, f"objects/{prefix}/{suffix}")
 
-    with open(file_path, "rb") as f:
-        compressed_data = f.read()
-        return zlib.decompress(compressed_data)
+    try:
+        with open(file_path, "rb") as f:
+            compressed_data = f.read()
+            return zlib.decompress(compressed_data)
+    except FileNotFoundError:
+        return None
 
 
 def object_exists(object_hash: str, repo_abspath: str) -> bool:
@@ -69,14 +72,12 @@ def object_exists(object_hash: str, repo_abspath: str) -> bool:
     return os.path.exists(file_path)
 
 
-def get_object_by_hash(object_hash: str, repo_abspath: str) -> Dict[str, Any]:
+def get_object_by_hash(object_hash: str, repo_abspath: str) -> Dict[str, Any] | None:
     file_content = None
     try:
         file_content = get_file_content_by_hash(object_hash, repo_abspath)
     except FileNotFoundError:
-        raise error(
-            f"error: unable to open loose object {object_hash}: Not a directory"
-        )
+        return None
 
     gut_object = serialization.decode_object(file_content)
     return gut_object
@@ -84,5 +85,5 @@ def get_object_by_hash(object_hash: str, repo_abspath: str) -> Dict[str, Any]:
 
 def get_object_by_hash_abbreviation(
     hash_abbr: str, repo_abspath: str
-) -> Dict[str, Any]:
+) -> Dict[str, Any] | None:
     raise error("error: getting object by abbreviation is not implemented")
